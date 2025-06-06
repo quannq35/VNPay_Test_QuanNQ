@@ -15,6 +15,7 @@ class ViewController: UIViewController {
     private var viewModel: PhotoViewModel?
     private var currentPage = 0
     private let limit = 100
+    private let pageCount = 10
     private var allowLoadmore = true
     private var allowRefesh = true
     private let refreshControll = UIRefreshControl()
@@ -109,11 +110,14 @@ class ViewController: UIViewController {
                 completion?(nil)
                 return
             }
-            let resizedImage = photo.resizedToWidth(ratio: Float(photo.size.width / photo.size.height))
-            ImageCacheManager.shared.save(resizedImage, for: url)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                completion?(resizedImage)
+            DispatchQueue.global().async {
+                let resizedImage = photo.resizedToWidth(ratio: Float(photo.size.width / photo.size.height))
+                ImageCacheManager.shared.save(resizedImage, for: url)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    completion?(resizedImage)
+                }
             }
+            
         })
     }
     
@@ -176,11 +180,14 @@ extension ViewController: UITableViewDelegate, UITableViewDataSource, UITableVie
                     if let cachedImage = ImageCacheManager.shared.getImage(for: url) {
                         cell.setImage(image: cachedImage)
                     } else {
+                        cell.startLoading()
                         cell.photoImg.image = nil
-                        self.loadPhoto(url: url) { image in
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        self.loadPhoto(url: url) { [weak self] image in
+                            DispatchQueue.main.async {
                                 if cell.currentImageURL == url {
                                     cell.setImage(image: image)
+//                                    self?.photoTableView.beginUpdates()
+//                                    self?.photoTableView.endUpdates()
                                 }
                             }
                         }
@@ -196,7 +203,7 @@ extension ViewController: UITableViewDelegate, UITableViewDataSource, UITableVie
             // Load more khi lastIndex Path  == độ dài của list data
             let lastIndex = viewModel.photos.count - 1
             if indexPath.row == lastIndex {
-                if allowLoadmore {
+                if allowLoadmore && currentPage < pageCount {
                     tableView.tableFooterView = createLoadMoreView()
                     currentPage += 1
                     viewModel.loadMore(page: currentPage)
