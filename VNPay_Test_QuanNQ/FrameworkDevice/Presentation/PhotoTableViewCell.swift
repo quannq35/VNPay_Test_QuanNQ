@@ -64,6 +64,11 @@ class PhotoTableViewCell: UITableViewCell {
         } else {
             self.sizeImageLabel.text = "Size: Chưa có đầy đủ kích thước"
         }
+        if let height = photo.height, let width = photo.width {
+            let ratio = CGFloat(height) / CGFloat(width)
+            let widthImage = UIScreen.main.bounds.width
+            self.imageHeight.constant = widthImage * ratio
+        }
     }
     
     func setImage(image: UIImage?) {
